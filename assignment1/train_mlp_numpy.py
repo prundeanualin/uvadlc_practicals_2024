@@ -281,4 +281,4 @@ if __name__ == '__main__':
     # Feel free to add any additional functions, such as plotting of the loss curve here
     plot_utils.plot_train_valid_losses_per_epoch(logging_dict['train/loss'],
                                                  logging_dict['val/loss'],
-                                                 is_pytorch=False)
+                                                 suffix='numpy')

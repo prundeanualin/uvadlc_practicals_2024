@@ -26,17 +26,24 @@ from copy import deepcopy
 
 import torch.nn as nn
 from torch import save, load
-from collections import OrderedDict
 
 
 def kaiming_init(model):
-    for name, param in model.named_parameters():
-        if name.endswith(".bias"):
-            param.data.fill_(0)
-        elif name.startswith("layers.0"): # The first layer does not have ELU applied on its input
-            param.data.normal_(0, 1/math.sqrt(param.shape[1]))
-        else:
-            param.data.normal_(0, math.sqrt(2)/math.sqrt(param.shape[1]))
+    first_linear_layer = True
+    for m in model.modules():
+        if isinstance(m, nn.Linear):
+            if first_linear_layer:
+                # The first layer does not have ELU applied on its input
+                nn.init.normal_(m.weight, 0, 1 / math.sqrt(m.in_features))
+                first_linear_layer = False
+            else:
+                nn.init.normal_(m.weight, 0, math.sqrt(2) / math.sqrt(m.in_features))
+            # Initialize biases of linear modules to 0
+            nn.init.zeros_(m.bias)
+        # Initialize batch norm to std 1 and mean 0
+        if isinstance(m, nn.BatchNorm1d):
+            nn.init.constant_(m.weight, 1)
+            nn.init.constant_(m.bias, 0)
 
 
 class MLP(nn.Module):
@@ -77,14 +84,18 @@ class MLP(nn.Module):
         layers = []
         n_layers = [n_inputs] + n_hidden
         for layer_idx in range(1, len(n_layers)):
+            # Linear module
             layers.append(nn.Linear(n_layers[layer_idx-1], n_layers[layer_idx]))
+            if use_batch_norm:
+                # Add Batch Normalization
+                layers.append(nn.BatchNorm1d(n_layers[layer_idx]))
+            # Activation function
             layers.append(nn.ELU())
         # Append last layer, output layer
         layers.append(nn.Linear(n_layers[-1], n_classes))
         self.layers = nn.ModuleList(layers)
         # Kaiming initializtion
         kaiming_init(self)
-        # TODO add batch normalization
         #######################
         # END OF YOUR CODE    #
         #######################

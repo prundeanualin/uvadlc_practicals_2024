@@ -1,11 +1,9 @@
 import matplotlib.pyplot as plt
 
 
-def plot_train_valid_losses_per_epoch(train_loss, valid_loss, is_pytorch: bool=True):
+def plot_train_valid_losses_per_epoch(train_loss, valid_loss, suffix=''):
     if len(train_loss) != len(valid_loss):
         raise ValueError('train_losses and valid_losses must have the same length (=nr of epochs)')
-
-    lib = 'pytorch' if is_pytorch else 'numpy'
 
     epochs = list(range(1, len(train_loss) + 1))
 
@@ -30,14 +28,14 @@ def plot_train_valid_losses_per_epoch(train_loss, valid_loss, is_pytorch: bool=T
                  fontsize=12,
                  horizontalalignment='center')
 
-    plt.title(f'Training and Validation Loss Across Epochs ({lib})', fontsize=16, fontweight='bold')
+    plt.title(f'Training and Validation Loss Across Epochs ({suffix})', fontsize=16, fontweight='bold')
     plt.xlabel('Epoch', fontsize=14)
     plt.ylabel('Loss', fontsize=14)
     plt.xticks(epochs)
     plt.legend(title='Loss Type', fontsize=12)
     plt.grid(True, which='both', linestyle='--', linewidth=0.5)
     plt.tight_layout()
-    plt.savefig(f'train_valid_losses_per_epoch_{lib}.png')
+    plt.savefig(f'train_valid_losses_per_epoch_{suffix}.png')
     plt.show()
 
 

@@ -301,7 +301,10 @@ if __name__ == '__main__':
         print("!!! DEBUG MODE !!!")
 
     best_model, _, _, logging_dict = train(**kwargs)
+    plot_suffix = 'pytorch'
+    if args.use_batch_norm:
+        plot_suffix += '_batchnorm'
     # Feel free to add any additional functions, such as plotting of the loss curve here
     plot_utils.plot_train_valid_losses_per_epoch(logging_dict['train/loss'],
                                                  logging_dict['val/loss'],
-                                                 is_pytorch=True)
+                                                 suffix=plot_suffix)
