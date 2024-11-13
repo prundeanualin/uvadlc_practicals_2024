@@ -28,8 +28,8 @@ from pprint import pprint
 
 import numpy as np
 
-from assignment1 import plot_utils
-from assignment1.utils import tqdm_
+import plot_utils
+from utils import tqdm_
 from mlp_numpy import MLP
 from modules import CrossEntropyModule, LinearModule
 import cifar10_utils
