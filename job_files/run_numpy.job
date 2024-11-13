@@ -1,0 +1,22 @@
+#!/bin/bash
+
+#SBATCH --partition=gpu
+#SBATCH --gpus=1
+#SBATCH --job-name=RunTraining
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=18
+#SBATCH --time=01:00:00
+#SBATCH --output=/home/scur2769/output/success/out-%x.%A.out
+#SBATCH --error=/home/scur2769/output/error/out-%x.%A.err
+
+module purge
+# The default modules for deep learning
+module load 2022
+module load Anaconda3/2022.05
+
+# Activate your environment
+source activate dl2024
+
+# Go to the directory that contains the project, the runnable
+cd $HOME/uvadlc_practicals_2024/assignment1
+srun python -O train_mlp_numpy.py
