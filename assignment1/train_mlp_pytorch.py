@@ -308,3 +308,4 @@ if __name__ == '__main__':
     plot_utils.plot_train_valid_losses_per_epoch(logging_dict['train/loss'],
                                                  logging_dict['val/loss'],
                                                  suffix=plot_suffix)
+    plot_utils.plot_valid_accuracy_per_epoch(logging_dict['val/acc'], suffix=plot_suffix)

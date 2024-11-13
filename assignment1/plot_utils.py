@@ -56,7 +56,7 @@ def plot_valid_accuracy_per_epoch(valid_accuracy, suffix=''):
     plt.scatter(max_epoch, max_valid_acc, color='red', s=100, zorder=5)
     plt.annotate(f'Max Val Acc\nEpoch {max_epoch}: {max_valid_acc:.2f}%',
                  xy=(max_epoch, max_valid_acc),
-                 xytext=(max_epoch, max_valid_acc + 0.05),
+                 xytext=(max_epoch, max_valid_acc + 0.7),
                  arrowprops=dict(facecolor='red', shrink=0.05),
                  fontsize=12,
                  horizontalalignment='center')
