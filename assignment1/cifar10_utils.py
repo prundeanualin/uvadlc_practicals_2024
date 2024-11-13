@@ -28,7 +28,7 @@ from torch.utils.data import Subset
 from torchvision import transforms
 
 def get_dataloader(dataset, batch_size, return_numpy=False):
-    collate_fn = numpy_collate_fn if return_numpy else None
+    collate_fn = numpy_collate_fn if return_numpy else pytorch_collate_fn
     train_dataloader      = DataLoader(dataset=dataset["train"], batch_size=batch_size, shuffle=True, drop_last=True,
                                        collate_fn=collate_fn)
     validation_dataloader = DataLoader(dataset=dataset["validation"], batch_size=batch_size, shuffle=False, drop_last=False,
@@ -43,6 +43,19 @@ def numpy_collate_fn(batch):
     imgs = torch.stack([b[0].flatten() for b in batch], dim=0).numpy()
     # one hot encode the labels
     labels = np.array([np.eye(10)[b[1]] for b in batch], dtype=np.int32)
+    return imgs, labels
+
+
+def pytorch_collate_fn(batch):
+    # flatten the 3x32x32 images into a one-dimensional 3072 array
+    imgs = torch.stack([b[0].flatten() for b in batch], dim=0)
+    # transform the labels to tensor
+    labels = torch.tensor([b[1] for b in batch])
+    # print(labels)
+    # one hot encode the labels
+    labels = torch.nn.functional.one_hot(labels, num_classes=10).type(dtype=torch.float)
+    # print("One hot encoded labels:\n")
+    # print(labels[0])
     return imgs, labels
 
 

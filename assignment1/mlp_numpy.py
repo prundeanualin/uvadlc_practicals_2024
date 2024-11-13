@@ -23,6 +23,7 @@ from __future__ import print_function
 
 from modules import *
 
+from copy import deepcopy
 
 class MLP(object):
     """
@@ -149,8 +150,8 @@ class MLP(object):
         weights_dict = {}
         for layer in self.layers:
             if LinearModule == type(layer):
-                weights_dict[f'linear_{linear_layer_idx}-weight'] = layer.params['weight']
-                weights_dict[f'linear_{linear_layer_idx}-bias'] = layer.params['bias']
+                weights_dict[f'linear_{linear_layer_idx}-weight'] = deepcopy(layer.params['weight'])
+                weights_dict[f'linear_{linear_layer_idx}-bias'] = deepcopy(layer.params['bias'])
                 linear_layer_idx += 1
         np.savez_compressed(path, **weights_dict)
 

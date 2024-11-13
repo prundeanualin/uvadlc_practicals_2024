@@ -21,8 +21,22 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import math
+from copy import deepcopy
+
 import torch.nn as nn
+from torch import save, load
 from collections import OrderedDict
+
+
+def kaiming_init(model):
+    for name, param in model.named_parameters():
+        if name.endswith(".bias"):
+            param.data.fill_(0)
+        elif name.startswith("layers.0"): # The first layer does not have ELU applied on its input
+            param.data.normal_(0, 1/math.sqrt(param.shape[1]))
+        else:
+            param.data.normal_(0, math.sqrt(2)/math.sqrt(param.shape[1]))
 
 
 class MLP(nn.Module):
@@ -51,7 +65,7 @@ class MLP(nn.Module):
         TODO:
         Implement module setup of the network.
         The linear layer have to initialized according to the Kaiming initialization.
-        Add the Batch-Normalization _only_ is use_batch_norm is True.
+        Add the Batch-Normalization _only_ if use_batch_norm is True.
 
         Hint: No softmax layer is needed here. Look at the CrossEntropyLoss module for loss calculation.
         """
@@ -59,7 +73,18 @@ class MLP(nn.Module):
         #######################
         # PUT YOUR CODE HERE  #
         #######################
-        pass
+        super(MLP, self).__init__()
+        layers = []
+        n_layers = [n_inputs] + n_hidden
+        for layer_idx in range(1, len(n_layers)):
+            layers.append(nn.Linear(n_layers[layer_idx-1], n_layers[layer_idx]))
+            layers.append(nn.ELU())
+        # Append last layer, output layer
+        layers.append(nn.Linear(n_layers[-1], n_classes))
+        self.layers = nn.ModuleList(layers)
+        # Kaiming initializtion
+        kaiming_init(self)
+        # TODO add batch normalization
         #######################
         # END OF YOUR CODE    #
         #######################
@@ -81,7 +106,10 @@ class MLP(nn.Module):
         #######################
         # PUT YOUR CODE HERE  #
         #######################
-
+        # Feed the input through each layer
+        for layer in self.layers:
+            x = layer(x)
+        out = x
         #######################
         # END OF YOUR CODE    #
         #######################
@@ -95,3 +123,10 @@ class MLP(nn.Module):
         """
         return next(self.parameters()).device
 
+    def save_model(self, path):
+        print("Saving model to {}".format(path))
+        save(deepcopy(self.state_dict()), path)
+
+    def load_model(self, path):
+        print("Loading model from {}".format(path))
+        self.load_state_dict(load(path, weights_only=True))

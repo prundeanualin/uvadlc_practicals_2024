@@ -24,26 +24,17 @@ from __future__ import print_function
 import argparse
 import math
 import time
-from functools import partial
 from pprint import pprint
 
 import numpy as np
-import os
-from tqdm.auto import tqdm
-from copy import deepcopy
 
 from assignment1 import plot_utils
+from assignment1.utils import tqdm_
 from mlp_numpy import MLP
 from modules import CrossEntropyModule, LinearModule
 import cifar10_utils
 
 import torch
-
-# For better visualization of progress bar
-tqdm_ = partial(tqdm,
-                dynamic_ncols=True,
-                leave=True,
-                bar_format='{l_bar}{bar}| {n_fmt}/{total_fmt} [{rate_fmt}{postfix}]')
 
 
 def accuracy(predictions, targets):
@@ -173,14 +164,16 @@ def train(hidden_dims, lr, batch_size, epochs, seed, data_dir, debug):
     num_classes = 10
     # Images in CIFAR10 are 3x32x32 => 3072 flattened array
     input_shape = 3072
-    best_weights_save_path = 'best_weights.npz'
+    best_weights_save_path = 'best_weights_numpy.npz'
 
     #######################
     # PUT YOUR CODE HERE  #
     #######################
 
+    # Initialize the model
     model = MLP(input_shape, n_hidden=hidden_dims, n_classes=num_classes)
     print(f"Initialized MLP with layers: {[type(l) for l in model.layers]}")
+    # Initialize the loss
     loss_module = CrossEntropyModule()
 
     train_losses = []
@@ -286,4 +279,6 @@ if __name__ == '__main__':
 
     best_model, _, _, logging_dict = train(**kwargs)
     # Feel free to add any additional functions, such as plotting of the loss curve here
-    plot_utils.plot_train_valid_losses_per_epoch(logging_dict['train/loss'], logging_dict['val/loss'])
+    plot_utils.plot_train_valid_losses_per_epoch(logging_dict['train/loss'],
+                                                 logging_dict['val/loss'],
+                                                 is_pytorch=False)
