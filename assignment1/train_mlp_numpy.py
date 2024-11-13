@@ -22,15 +22,28 @@ from __future__ import division
 from __future__ import print_function
 
 import argparse
+import math
+import time
+from functools import partial
+from pprint import pprint
+
 import numpy as np
 import os
 from tqdm.auto import tqdm
 from copy import deepcopy
+
+from assignment1 import plot_utils
 from mlp_numpy import MLP
-from modules import CrossEntropyModule
+from modules import CrossEntropyModule, LinearModule
 import cifar10_utils
 
 import torch
+
+# For better visualization of progress bar
+tqdm_ = partial(tqdm,
+                dynamic_ncols=True,
+                leave=True,
+                bar_format='{l_bar}{bar}| {n_fmt}/{total_fmt} [{rate_fmt}{postfix}]')
 
 
 def accuracy(predictions, targets):
@@ -39,8 +52,8 @@ def accuracy(predictions, targets):
     of the network.
 
     Args:
-      predictions: 2D float array of size [batch_size, n_classes], predictions of the model (logits)
-      labels: 1D int array of size [batch_size]. Ground truth labels for
+      predictions: 2D float array of size [batch_size, n_classes], predictions of the model (probabilities)
+      labels: 2D one-hot encoded array of size [batch_size, n_classes]. Ground truth labels for
               each sample in the batch
     Returns:
       accuracy: scalar float, the accuracy of predictions between 0 and 1,
@@ -53,7 +66,10 @@ def accuracy(predictions, targets):
     #######################
     # PUT YOUR CODE HERE  #
     #######################
-
+    prediction_max_prob = np.argmax(predictions, axis=1)
+    target_class = np.argmax(targets, axis=1)
+    num_samples = len(predictions)
+    accuracy = (prediction_max_prob == target_class).sum() / num_samples
     #######################
     # END OF YOUR CODE    #
     #######################
@@ -61,15 +77,19 @@ def accuracy(predictions, targets):
     return accuracy
 
 
-def evaluate_model(model, data_loader):
+def evaluate_model(model, data_loader, loss_module: CrossEntropyModule = None, desc=''):
     """
     Performs the evaluation of the MLP model on a given dataset.
 
     Args:
       model: An instance of 'MLP', the model to evaluate.
       data_loader: The data loader of the dataset to evaluate.
+      loss_module: The loss function to compute the loss. If missing, will only compute the accuracy
+      desc: Description to be used in the progress bar
     Returns:
       avg_accuracy: scalar float, the average accuracy of the model on the dataset.
+      avg_loss: scalar float, the average loss of the model on the dataset.
+                If the loss function is missing, this will be None
 
     TODO:
     Implement evaluation of the MLP model on a given dataset.
@@ -81,15 +101,28 @@ def evaluate_model(model, data_loader):
     #######################
     # PUT YOUR CODE HERE  #
     #######################
-
+    accuracy_per_batch = []
+    loss_per_batch = []
+    for images, labels in tqdm_(data_loader, total=len(data_loader), desc=desc):
+        predictions = model.forward(images)
+        # If the loss function is present, will also calculate the loss for this dataset
+        if loss_module:
+            batch_loss = loss_module.forward(predictions, labels)
+            loss_per_batch.append(batch_loss)
+        batch_accuracy = accuracy(predictions, labels)
+        accuracy_per_batch.append(batch_accuracy)
+    avg_accuracy = sum(accuracy_per_batch) / len(accuracy_per_batch)
+    avg_loss = None
+    if loss_module:
+        avg_loss = sum(loss_per_batch) / len(loss_per_batch)
     #######################
     # END OF YOUR CODE    #
     #######################
 
-    return avg_accuracy
+    return avg_accuracy, avg_loss
 
 
-def train(hidden_dims, lr, batch_size, epochs, seed, data_dir):
+def train(hidden_dims, lr, batch_size, epochs, seed, data_dir, debug):
     """
     Performs a full training cycle of MLP model.
 
@@ -100,6 +133,7 @@ def train(hidden_dims, lr, batch_size, epochs, seed, data_dir):
       epochs: Number of training epochs to perform.
       seed: Seed to use for reproducible results.
       data_dir: Directory where to store/find the CIFAR10 dataset.
+      debug: Run training in debug mode, with smaller dataset
     Returns:
       model: An instance of 'MLP', the trained model that performed best on the validation set.
       val_accuracies: A list of scalar floats, containing the accuracies of the model on the
@@ -125,24 +159,95 @@ def train(hidden_dims, lr, batch_size, epochs, seed, data_dir):
     np.random.seed(seed)
     torch.manual_seed(seed)
 
+    start_time = time.time()
+
     ## Loading the dataset
-    cifar10 = cifar10_utils.get_cifar10(data_dir)
+    cifar10 = cifar10_utils.get_cifar10(data_dir, debug=debug)
     cifar10_loader = cifar10_utils.get_dataloader(cifar10, batch_size=batch_size,
                                                   return_numpy=True)
+    train_set = cifar10_loader['train']
+    validation_set = cifar10_loader['validation']
+    test_set = cifar10_loader['test']
+
+    # 10 classes in CIFAR10 dataset
+    num_classes = 10
+    # Images in CIFAR10 are 3x32x32 => 3072 flattened array
+    input_shape = 3072
+    best_weights_save_path = 'best_weights.npz'
 
     #######################
     # PUT YOUR CODE HERE  #
     #######################
 
-    # TODO: Initialize model and loss module
-    model = ...
-    loss_module = ...
-    # TODO: Training loop including validation
-    val_accuracies = ...
-    # TODO: Test best model
-    test_accuracy = ...
-    # TODO: Add any information you might want to save for plotting
-    logging_dict = ...
+    model = MLP(input_shape, n_hidden=hidden_dims, n_classes=num_classes)
+    print(f"Initialized MLP with layers: {[type(l) for l in model.layers]}")
+    loss_module = CrossEntropyModule()
+
+    train_losses = []
+    best_val_loss = math.inf
+    val_losses = []
+    val_accuracies = []
+
+    print("Start training...")
+    for epoch in range(epochs):
+        epoch_loss_per_batch = []
+        tq_iter = tqdm_(train_set, total=len(train_set), desc=f'Train Epoch {epoch + 1}/{epochs}')
+        for images, labels in tq_iter:
+            # Model inference
+            predictions = model.forward(images)
+
+            # Compute the loss
+            loss = loss_module.forward(predictions, labels)
+            epoch_loss_per_batch.append(loss)
+
+            # Compute the gradient of the loss function
+            d_loss = loss_module.backward(predictions, labels)
+
+            # Propagate the loss gradient through the layers
+            model.backward(d_loss)
+
+            # SGD update for the linear layers
+            for layer in model.layers:
+                if LinearModule == type(layer):
+                    layer.params['weight'] = layer.params['weight'] - lr * layer.grads['weight']
+                    layer.params['bias'] = layer.params['bias'] - lr * layer.grads['bias']
+
+            # Put the batch loss in the progress bar description
+            postfix: dict[str, str] = {"Loss": f"{loss:.4f}"}
+            tq_iter.set_postfix(postfix)
+
+        # Compute the average training loss for this epoch
+        epoch_loss = sum(epoch_loss_per_batch)/len(epoch_loss_per_batch)
+        train_losses.append(epoch_loss)
+
+        # Evaluate the model on the validation set, computing both loss and acc
+        valid_acc, valid_loss = evaluate_model(model, validation_set, loss_module, desc=f'Valid Epoch {epoch + 1}/{epochs}')
+        val_losses.append(valid_loss)
+        val_accuracies.append(valid_acc)
+        print(f"\nEpoch {epoch + 1}: Train loss: {epoch_loss:.3f}  |  Valid loss: {valid_loss:.3f}  |  Valid accuracy: {valid_acc * 100:.2f}%")
+
+        if valid_loss < best_val_loss:
+            best_val_loss = valid_loss
+            print(f"New best validation loss: {best_val_loss:.3f}!")
+            model.save_model_weights(best_weights_save_path)
+    print("Done training!")
+
+    # Load the best model
+    model.load_model_weights(best_weights_save_path)
+
+    # Evaluate the best model on the test set
+    test_accuracy, _ = evaluate_model(model, test_set, desc='Test')
+    print(f"Test Accuracy: {test_accuracy * 100:.2f}%")
+
+    end_time = time.time()
+    duration = end_time - start_time
+    print(f"Running time: {duration:.2f} seconds")
+
+    logging_dict = {
+        'train/loss': train_losses,
+        'val/loss': val_losses,
+        'val/acc': val_accuracies,
+    }
     #######################
     # END OF YOUR CODE    #
     #######################
@@ -172,8 +277,13 @@ if __name__ == '__main__':
     parser.add_argument('--data_dir', default='data/', type=str,
                         help='Data directory where to store/find the CIFAR10 dataset.')
 
+    parser.add_argument('--debug', action='store_true', help='Use only 200 samples from the dataset for training')
     args = parser.parse_args()
     kwargs = vars(args)
+    pprint(args)
+    if args.debug:
+        print("!!! DEBUG MODE !!!")
 
-    train(**kwargs)
+    best_model, _, _, logging_dict = train(**kwargs)
     # Feel free to add any additional functions, such as plotting of the loss curve here
+    plot_utils.plot_train_valid_losses_per_epoch(logging_dict['train/loss'], logging_dict['val/loss'])

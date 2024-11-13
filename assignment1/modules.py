@@ -17,6 +17,8 @@
 This module implements various modules of the network.
 You should fill in code into indicated sections.
 """
+import math
+
 import numpy as np
 
 
@@ -50,7 +52,27 @@ class LinearModule(object):
         #######################
         # PUT YOUR CODE HERE  #
         #######################
+        self.in_features = in_features
+        self.out_features = out_features
+        self.input = None
 
+        # Initialization
+        # Initialize biases to 0 with shape (1 x out_features), a bias for each neuron
+        self.params['bias'] = np.zeros((1, out_features))
+        # Kaiming initialization for weights
+        if input_layer:
+            # no ReLU applied to the inputs, variance is linear
+            self.params['weight'] = np.random.normal(size=(out_features, in_features),
+                                                     loc=0,
+                                                     scale=1 / math.sqrt(in_features))
+        else:
+            # ReLU applied on the inputs, compensate for its variance
+            self.params['weight'] = np.random.normal(size=(out_features, in_features),
+                                                     loc=0,
+                                                     scale=math.sqrt(2) / math.sqrt(in_features))
+        # Initialize gradients to 0
+        self.grads['weight'] = np.zeros((self.out_features, self.in_features))
+        self.grads['bias'] = np.zeros((1, out_features))
         #######################
         # END OF YOUR CODE    #
         #######################
@@ -73,6 +95,10 @@ class LinearModule(object):
         #######################
         # PUT YOUR CODE HERE  #
         #######################
+
+        # Input should be batched and have size (batch_size x n_features)
+        self.input = x # stored for computing the gradient later
+        out = x @ self.params['weight'].T + self.params['bias']
 
         #######################
         # END OF YOUR CODE    #
@@ -97,7 +123,9 @@ class LinearModule(object):
         #######################
         # PUT YOUR CODE HERE  #
         #######################
-
+        self.grads['weight'] = dout.T @ self.input
+        self.grads['bias'] = dout.sum(axis=0)
+        dx = dout @ self.params['weight']
         #######################
         # END OF YOUR CODE    #
         #######################
@@ -114,7 +142,10 @@ class LinearModule(object):
         #######################
         # PUT YOUR CODE HERE  #
         #######################
-        pass
+        self.input = None
+        # Reset gradients
+        self.grads['weight'] = np.zeros_like(self.grads['weight'])
+        self.grads['bias'] = np.zeros_like(self.grads['bias'])
         #######################
         # END OF YOUR CODE    #
         #######################
@@ -127,6 +158,7 @@ class ELUModule(object):
 
     def __init__(self, alpha):
         self.alpha = alpha
+        self.input = None
 
     def forward(self, x):
         """
@@ -146,7 +178,8 @@ class ELUModule(object):
         #######################
         # PUT YOUR CODE HERE  #
         #######################
-
+        self.input = x
+        out = np.where(x > 0, x, self.alpha * (np.exp(x) - 1))
         #######################
         # END OF YOUR CODE    #
         #######################
@@ -168,7 +201,9 @@ class ELUModule(object):
         #######################
         # PUT YOUR CODE HERE  #
         #######################
-
+        # The derivative of ELU
+        d_elu = np.where(self.input > 0, np.ones_like(self.input), self.forward(self.input) + self.alpha)
+        dx = np.multiply(dout, d_elu)
         #######################
         # END OF YOUR CODE    #
         #######################
@@ -185,7 +220,7 @@ class ELUModule(object):
         #######################
         # PUT YOUR CODE HERE  #
         #######################
-        pass
+        self.input = None
         #######################
         # END OF YOUR CODE    #
         #######################
@@ -195,6 +230,9 @@ class SoftMaxModule(object):
     """
     Softmax activation module.
     """
+
+    def __init__(self):
+        self.output = None
 
     def forward(self, x):
         """
@@ -214,7 +252,10 @@ class SoftMaxModule(object):
         #######################
         # PUT YOUR CODE HERE  #
         #######################
-
+        max_val_per_sample = np.max(x, axis=1, keepdims=True)
+        y = np.exp(x - max_val_per_sample)
+        out = y / np.sum(y, axis=1, keepdims=True)
+        self.output = out
         #######################
         # END OF YOUR CODE    #
         #######################
@@ -225,7 +266,7 @@ class SoftMaxModule(object):
         """
         Backward pass.
         Args:
-          dout: gradients of the previous modul
+          dout: gradients of the previous module
         Returns:
           dx: gradients with respect to the input of the module
 
@@ -236,7 +277,11 @@ class SoftMaxModule(object):
         #######################
         # PUT YOUR CODE HERE  #
         #######################
-
+        # using the formula for dL / dZ from the assignment 1.e), which is defined based on dL / dY
+        num_classes = self.output.shape[1]
+        inner_parenthesis_result = np.multiply(dout, self.output)
+        outer_parenthesis_result = dout - inner_parenthesis_result @ np.ones((num_classes, num_classes))
+        dx = np.multiply(self.output, outer_parenthesis_result)
         #######################
         # END OF YOUR CODE    #
         #######################
@@ -254,7 +299,7 @@ class SoftMaxModule(object):
         #######################
         # PUT YOUR CODE HERE  #
         #######################
-        pass
+        self.output = None
         #######################
         # END OF YOUR CODE    #
         #######################
@@ -281,11 +326,11 @@ class CrossEntropyModule(object):
         #######################
         # PUT YOUR CODE HERE  #
         #######################
-
+        num_samples = y.shape[0] # since y is of shape (batch_size x num_classes)
+        out = - np.sum(np.multiply(y, np.log(x))) / num_samples
         #######################
         # END OF YOUR CODE    #
         #######################
-
         return out
 
     def backward(self, x, y):
@@ -304,7 +349,8 @@ class CrossEntropyModule(object):
         #######################
         # PUT YOUR CODE HERE  #
         #######################
-
+        num_samples = y.shape[0] # since y is of shape (batch_size x num_classes)
+        dx = - (y / (x)) / num_samples
         #######################
         # END OF YOUR CODE    #
         #######################

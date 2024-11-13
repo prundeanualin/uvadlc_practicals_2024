@@ -73,14 +73,14 @@ class TestLosses(unittest.TestCase):
         for test_num in range(10):
             N = np.random.choice(range(1, 100))
             C = np.random.choice(range(1, 10))
-            y = np.random.randint(C, size=(N,))
+            y = np.random.randint(C, size=(N,C))
             X = np.random.uniform(low=1e-2, high=1.0, size=(N, C))
             X /= X.sum(axis=1, keepdims=True)
 
             _ = CrossEntropyModule().forward(X, y)
             grads = CrossEntropyModule().backward(X, y)
 
-            f = lambda _: CrossEntropyModule().forward(X, y)
+            f = lambda xx: CrossEntropyModule().forward(xx, y)
             grads_num = eval_numerical_gradient(f, X, verbose=False, h=1e-5)
             self.assertLess(rel_error(grads_num, grads), rel_error_max)
 
@@ -152,3 +152,5 @@ if __name__ == '__main__':
 
     suite = unittest.TestLoader().loadTestsFromTestCase(TestLayers)
     unittest.TextTestRunner(verbosity=2).run(suite)
+
+

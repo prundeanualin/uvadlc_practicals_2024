@@ -24,8 +24,8 @@ import numpy as np
 from torchvision.datasets import CIFAR10
 from torch.utils.data import DataLoader
 from torch.utils.data import random_split
+from torch.utils.data import Subset
 from torchvision import transforms
-
 
 def get_dataloader(dataset, batch_size, return_numpy=False):
     collate_fn = numpy_collate_fn if return_numpy else None
@@ -39,20 +39,22 @@ def get_dataloader(dataset, batch_size, return_numpy=False):
 
 
 def numpy_collate_fn(batch):
-    imgs = torch.stack([b[0] for b in batch], dim=0).numpy()
-    labels = np.array([b[1] for b in batch], dtype=np.int32)
+    # flatten the 3x32x32 images into a one-dimensional 3072 array
+    imgs = torch.stack([b[0].flatten() for b in batch], dim=0).numpy()
+    # one hot encode the labels
+    labels = np.array([np.eye(10)[b[1]] for b in batch], dtype=np.int32)
     return imgs, labels
 
 
-def read_data_sets(data_dir, validation_size=5000):
+def read_data_sets(data_dir, validation_size=5000, debug=False):
     """
     Returns the dataset readed from data_dir.
     Uses or not uses one-hot encoding for the labels.
     Subsamples validation set with specified size if necessary.
     Args:
       data_dir: Data directory.
-      one_hot: Flag for one hot encoding.
       validation_size: Size of validation set
+      debug: Load only a small portion of the training set if True
     Returns:
       Dictionary with Train, Validation, Test Datasets
     """
@@ -72,22 +74,22 @@ def read_data_sets(data_dir, validation_size=5000):
     if not 0 <= validation_size <= len(train_dataset):
         raise ValueError("Validation size should be between 0 and {0}. Received: {1}.".format(
             len(train_dataset), validation_size))
-
     train_dataset, validation_dataset = random_split(train_dataset,
                                                      lengths=[len(train_dataset) - validation_size, validation_size],
                                                      generator=torch.Generator().manual_seed(42))
-
+    if debug:
+        train_dataset = Subset(train_dataset, range(0, 200))
     return {'train': train_dataset, 'validation': validation_dataset, 'test': test_dataset}
 
 
-def get_cifar10(data_dir='data/', validation_size=5000):
+def get_cifar10(data_dir='data/', validation_size=5000, debug=False):
     """
     Prepares CIFAR10 dataset.
     Args:
       data_dir: Data directory.
-      one_hot: Flag for one hot encoding.
       validation_size: Size of validation set
+      debug: Load only a fraction of the data if True
     Returns:
       Dictionary with Train, Validation, Test Datasets
     """
-    return read_data_sets(data_dir, validation_size)
+    return read_data_sets(data_dir, validation_size, debug)

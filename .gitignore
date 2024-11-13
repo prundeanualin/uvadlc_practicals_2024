@@ -1,0 +1,6 @@
+# IDE files
+/.idea
+**/__pycache__
+
+# Data files
+/assignment1/data
