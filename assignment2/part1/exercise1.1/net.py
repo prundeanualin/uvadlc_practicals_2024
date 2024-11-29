@@ -19,6 +19,9 @@ from torch.autograd import Variable
 import argparse
 from utils import gen_box_data, gen_box_data_test
 
+from logging import info, debug
+import logging as l
+
 class Net(nn.Module):
     '''
     Create network with 4 Conv layers
@@ -77,16 +80,16 @@ class Net(nn.Module):
 
     def forward(self, x):
 
-        print(f"Input image size is: {x.shape}")
+        debug(f"Input image size is: {x.shape}")
 
         x = F.relu(self.conv1(x))
-        print(f"Conv1 output size is: {x.shape}")
+        debug(f"Conv1 output size is: {x.shape}")
         x = F.relu(self.conv2(x))
-        print(f"Conv2 output size is: {x.shape}")
+        debug(f"Conv2 output size is: {x.shape}")
         x = F.relu(self.conv3(x))
-        print(f"Conv3 output size is: {x.shape}")
+        debug(f"Conv3 output size is: {x.shape}")
         x = F.relu(self.conv4(x))
-        print(f"Conv4 output size is: {x.shape}")
+        debug(f"Conv4 output size is: {x.shape}")
         
         if self.net_type == 'Net1':
             x = self.adap_max(x)
@@ -98,6 +101,7 @@ class Net(nn.Module):
         x = x.view(-1, 64 * 1 * 1)
         x = self.fc1(x)
         return x
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -117,8 +121,17 @@ if __name__ == '__main__':
     parser.add_argument("--epochs", type=int, default=50, help="number of epochs")
     parser.add_argument("--batch_size", type=int, default=200, help="size of each image batch")
 
+    parser.add_argument("--debug", action='store_true', help="run in debug mode, for 1 round and fewer epochs")
+
     opt = parser.parse_args()
     print(opt)
+
+    if opt.debug:
+        l.basicConfig(level=l.DEBUG, format='%(levelname)s: %(message)s')
+        debug("!!!! Using debug mode !!!!!")
+        opt.epochs = 2
+        opt.n_repeat = 1
+        debug(f"Using {opt.epochs} epochs and {opt.n_repeat} repetitions")
 
     use_gpu = torch.cuda.is_available()
     # //TODO replace with this model_checkpoint_name before final submission
