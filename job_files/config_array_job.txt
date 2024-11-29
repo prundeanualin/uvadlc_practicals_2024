@@ -1,0 +1,4 @@
+--conv_type reflect
+--conv_type circular
+--conv_type sconv
+--conv_type fconv

@@ -1,0 +1,32 @@
+#!/bin/bash
+
+#SBATCH --array=1-4
+#SBATCH --partition=gpu
+#SBATCH --gpus=1
+#SBATCH --job-name=train_Net1
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=18
+#SBATCH --time=01:00:00
+#SBATCH --output=/home/scur2769/output/success/out-%x.%A.out
+#SBATCH --error=/home/scur2769/output/error/out-%x.%A.err
+
+module purge
+# The default modules for deep learning
+module load 2022
+module load Anaconda3/2022.05
+
+# Activate your environment
+source activate dl2024
+
+# Go to the directory that contains the project, the runnable
+# Your job starts in the directory where you call sbatch
+cd $HOME/uvadlc_practicals_2024/assignment1
+
+# Read line by line (per job in array) from the config file
+CONFIG_FILE=$HOME/config_array_job.txt
+PARAMS=$( sed -n ${SLURM_ARRAY_TASK_ID}p $CONFIG_FILE )
+
+echo $PARAMS
+
+# Run your code
+srun python net.py --net_type Net1 $PARAMS
