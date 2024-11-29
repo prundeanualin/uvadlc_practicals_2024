@@ -1,3 +1,5 @@
+--conv_type valid
+--conv_type replicate
 --conv_type reflect
 --conv_type circular
 --conv_type sconv

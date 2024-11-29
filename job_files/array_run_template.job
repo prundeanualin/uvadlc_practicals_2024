@@ -1,9 +1,9 @@
 #!/bin/bash
 
-#SBATCH --array=1-4
+#SBATCH --array=1-6
 #SBATCH --partition=gpu
 #SBATCH --gpus=1
-#SBATCH --job-name=train_Net1
+#SBATCH --job-name=train_Net2
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=18
 #SBATCH --time=01:00:00
@@ -29,4 +29,4 @@ PARAMS=$( sed -n ${SLURM_ARRAY_TASK_ID}p $CONFIG_FILE )
 echo $PARAMS
 
 # Run your code
-srun python net.py --net_type Net1 $PARAMS
+srun python net.py --net_type Net2 $PARAMS
