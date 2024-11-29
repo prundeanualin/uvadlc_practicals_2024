@@ -2,7 +2,7 @@
 
 #SBATCH --partition=gpu
 #SBATCH --gpus=1
-#SBATCH --job-name=RunTraining
+#SBATCH --job-name=Run_valid
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=18
 #SBATCH --time=01:00:00
@@ -18,5 +18,6 @@ module load Anaconda3/2022.05
 source activate dl2024
 
 # Go to the directory that contains the project, the runnable
-cd $HOME/uvadlc_practicals_2024/assignment1
-srun python -O train_mlp_pytorch.py
+cd $HOME/uvadlc_practicals_2024/assignment2/part1/exercise1.1
+
+srun python net.py --net_type Net2 --conv_type valid
