@@ -20,7 +20,7 @@ source activate dl2024
 
 # Go to the directory that contains the project, the runnable
 # Your job starts in the directory where you call sbatch
-cd $HOME/uvadlc_practicals_2024/assignment1
+cd $HOME/uvadlc_practicals_2024/assignment2
 
 # Read line by line (per job in array) from the config file
 CONFIG_FILE=$HOME/config_array_job.txt
