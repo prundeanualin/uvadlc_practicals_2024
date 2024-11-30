@@ -1,6 +1,14 @@
 # IDE files
 /.idea
 **/__pycache__
+**/.DS_Store
 
 # Data files
 /assignment1/data
+assignment2/part1/data
+*.pth
+assignment2/part1/.ipynb_checkpoints
+
+# Assignment 2
+assignment2/part2/logs
+*.ckpt
