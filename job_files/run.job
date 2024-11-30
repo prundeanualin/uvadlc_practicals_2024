@@ -20,4 +20,4 @@ source activate dl2024
 # Go to the directory that contains the project, the runnable
 cd $HOME/uvadlc_practicals_2024/assignment2/part2
 
-srun python train.py --disable_train_generation --num_epochs 5
+srun python train.py --disable_train_generation --compile --use_flash_attn --num_epochs 5
