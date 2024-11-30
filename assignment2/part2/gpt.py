@@ -489,6 +489,7 @@ class GPT(nn.Module):
             torch.LongTensor: The tensor of token indices including the original and the newly generated 
                                 tokens, with shape (batch size, sequence length + max_new_tokens).
         """
+        self.eval()
         assert not (top_k and top_p), "You can only use one of top_k or top_p sampling"
         for _ in range(max_new_tokens):
             # if the sequence context is growing too long we must crop it at block_size
@@ -497,22 +498,38 @@ class GPT(nn.Module):
             # forward the model to get the logits for the index in the sequence
             # pluck the logits at the final step and scale by desired temperature
 
+            # Add a 'dummy' token at the end (duplicate of the last token),
+            # so that the input sequence is expanded with a new position.
+            # This new position will be used to predict the logits for the next token
+            new_token_to_be_generated = idx_cond[..., -1].unsqueeze(-1)
+            debug(f"New token to be gen shape: {new_token_to_be_generated.shape}")
+            debug(f"idx cond shape: {idx_cond.shape}")
+            debug(f"idx shape: {idx.shape}")
+            idx_cond = torch.cat((idx_cond, new_token_to_be_generated), dim=-1)
+            logits = self.forward(idx_cond)
+            # Get the logits of the last token
+            new_token_logits = logits[:, -1, :].squeeze(1)
+            # debug(f"New token logits are: {logits}")
+            debug(f"New token logits shape: {new_token_logits.shape}")
+
             if not do_sample:
                 # take the most likely token
-                idx_next = ...
-            
+                _, next_token_idx = torch.max(new_token_logits, dim=-1, keepdim=True)
+                debug(f"id_next: {next_token_idx}")
+                debug(f"id_next shape: {next_token_idx.shape}")
+
             else:
                 # apply softmax to convert logits to (normalized) probabilities
 
-                # optionally only consider top-k logits for sampling. 
+                # optionally only consider top-k logits for sampling.
                 if top_k is not None:
                     pass
 
                 # optionally apply top-p sampling
                 if top_p is not None:
                     pass
-            
-            # append sampled index to the running sequence and continue
-            idx = ...
 
+            # append sampled index to the running sequence and continue
+            idx = torch.cat((idx, next_token_idx), dim=-1)
+        self.train()
         return idx

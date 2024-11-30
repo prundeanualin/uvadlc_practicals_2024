@@ -40,8 +40,6 @@ def get_config():
     args, _ = parser.parse_known_args()  # Parse known args and ignore the rest
 
     if args.debug:
-        l.basicConfig(level=l.DEBUG, format='%(levelname)s: %(message)s')
-        l.debug("!!! Running in debug mode !!!")
         args.num_workers = 1
     else:
         args.num_workers = len(os.sched_getaffinity(0)) - 1

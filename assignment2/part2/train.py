@@ -15,6 +15,9 @@ from dataset import TextDataset, CharTokenizer
 from generate import generate as generate_pretrained
 from cfg import get_config
 
+import logging as l
+from logging import debug
+
 
 class GPTLightningModule(pl.LightningModule):
 
@@ -55,7 +58,8 @@ class GPTLightningModule(pl.LightningModule):
 
         # Generate some sentences once in a while
         if not self.config.disable_train_generation and self.global_step % self.config.generate_every_n_steps == 0:
-            generated_sents = self.generate()
+            generated_sents = self.generate(do_sample=False)  #TODO remove do_sample and leave the default val
+            print(f"Generated sentence is: {generated_sents}")
             self.logger.experiment.add_text('Training texts', generated_sents, self.global_step)
         return loss
     
@@ -185,6 +189,10 @@ def train(args):
     # Create generate callback
     save_callback = ModelCheckpoint(save_weights_only=True, mode="min", monitor="train_loss")
     lr_callback = LearningRateFinder()
+    callbacks = [save_callback, lr_callback]
+    if args.debug:
+        debug("!!! Using debug callbacks as None")
+        callbacks = None
 
     if "16" in args.precision:
         # Reduce even further precision in computations that might use it.
@@ -193,7 +201,7 @@ def train(args):
     # Initialize a pytorch-lightning trainer
     trainer = pl.Trainer(
         logger=logger,
-        callbacks=[save_callback, lr_callback],
+        callbacks=callbacks,
         max_epochs=args.num_epochs,
         accelerator=args.device,
         enable_progress_bar=args.progress_bar,
@@ -208,5 +216,9 @@ def train(args):
 if __name__ == "__main__":
     args = get_config()
     args.device = ("cuda" if torch.cuda.is_available() else ("mps" if torch.backends.mps.is_available() else "cpu"))
+
+    if args.debug:
+        l.basicConfig(level=l.DEBUG, format='%(levelname)s: %(message)s')
+        l.debug("!!! Running in debug mode !!!")
 
     train(args=args)

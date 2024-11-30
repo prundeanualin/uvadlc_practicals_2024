@@ -2,8 +2,8 @@ import torch
 from gpt import GPT
 import logging as l
 
-if __name__ == '__main__':
-    l.basicConfig(level=l.DEBUG, format='%(levelname)s: %(message)s')
+# if __name__ == '__main__':
+#     l.basicConfig(level=l.DEBUG, format='%(levelname)s: %(message)s')
 
     ############### Test GPT IMPL ################
     # vocab_size = 15
