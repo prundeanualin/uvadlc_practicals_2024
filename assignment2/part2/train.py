@@ -50,8 +50,11 @@ class GPTLightningModule(pl.LightningModule):
         acc = self.calc_accuracy_from_logits(logits, y)
         self.log('train_acc', acc, on_epoch=True)
 
+        if batch_idx % 100 == 0:
+            print(f"Processed {batch_idx} batches")
+
         # Generate some sentences once in a while
-        if self.global_step % self.config.generate_every_n_steps == 0:
+        if not self.config.disable_train_generation and self.global_step % self.config.generate_every_n_steps == 0:
             generated_sents = self.generate()
             self.logger.experiment.add_text('Training texts', generated_sents, self.global_step)
         return loss
@@ -204,6 +207,6 @@ def train(args):
 
 if __name__ == "__main__":
     args = get_config()
-    args.device = ("cuda" if torch.cuda.is_available() else ("mps" if torch.backends.mps.is_available() else "cpu")) 
+    args.device = ("cuda" if torch.cuda.is_available() else ("mps" if torch.backends.mps.is_available() else "cpu"))
 
     train(args=args)

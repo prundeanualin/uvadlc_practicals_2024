@@ -89,7 +89,7 @@ class Net(nn.Module):
         x = F.relu(self.conv3(x))
         debug(f"Conv3 output size is: {x.shape}")
         x = F.relu(self.conv4(x))
-        debug(f"Conv4 output size is: {x.shape}")
+        debug(f"Conv4 output size is: {x.shape}\n\n")
         
         if self.net_type == 'Net1':
             x = self.adap_max(x)

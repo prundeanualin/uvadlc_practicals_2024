@@ -3,8 +3,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import math
-from gpt import CausalSelfAttention  # Replace with the actual import path
-
+from gpt import CausalSelfAttention, RMSNorm  # Replace with the actual import path
+import logging as l
 
 class MockConfig:
     def __init__(self, n_embd=64, n_head=8, attn_pdrop=0, resid_pdrop=0.1, block_size=128, use_flash_attn=False, abs_emb=False):
@@ -18,8 +18,9 @@ class MockConfig:
 
 
 class TestCausalSelfAttention(unittest.TestCase):
+
     def test_output_shape(self):
-        config = MockConfig()
+        config = MockConfig(abs_emb=True)
         module = CausalSelfAttention(config)
         B, T, C = 2, 10, config.n_embd
         x = torch.randn(B, T, C)
@@ -27,7 +28,7 @@ class TestCausalSelfAttention(unittest.TestCase):
         self.assertEqual(output.shape, (B, T, C))
 
     def test_causal_masking(self):
-        config = MockConfig()
+        config = MockConfig(abs_emb=True)
         module = CausalSelfAttention(config, debug=True)
         B, T, C = 1, 5, config.n_embd
         x = torch.randn(B, T, C)
@@ -37,6 +38,8 @@ class TestCausalSelfAttention(unittest.TestCase):
             self.assertTrue(torch.allclose(att_probs[0, :, t, t+1:], torch.zeros_like(att_probs[0, :, t, t+1:])))
 
     def test_apply_rotary_emb(self):
+        l.basicConfig(level=l.DEBUG, format='%(levelname)s: %(message)s')
+
         config = MockConfig()
         module = CausalSelfAttention(config)
         B, T, n_head, dim = 1, 5, config.n_head, config.n_embd // config.n_head
@@ -50,7 +53,7 @@ class TestCausalSelfAttention(unittest.TestCase):
 
 
     def test_gradient_flow(self):
-        config = MockConfig()
+        config = MockConfig(abs_emb=True)
         module = CausalSelfAttention(config)
         B, T, C = 2, 10, config.n_embd
         x = torch.randn(B, T, C, requires_grad=True)
@@ -61,7 +64,7 @@ class TestCausalSelfAttention(unittest.TestCase):
         self.assertTrue(torch.isfinite(x.grad).all())
 
     def test_attention_component_shapes_and_softmax(self):
-        config = MockConfig()
+        config = MockConfig(abs_emb=True)
         module = CausalSelfAttention(config, debug=True)
         B, T, C = 2, 5, config.n_embd
         x = torch.randn(B, T, C)
@@ -77,6 +80,20 @@ class TestCausalSelfAttention(unittest.TestCase):
         # Check that attention weights sum to 1 after softmax
         self.assertTrue(torch.allclose(att_probs.sum(dim=-1), torch.ones_like(att_probs.sum(dim=-1)), atol=1e-5),
                         "Attention probabilities do not sum to 1")
+
+
+    def test_rms_normalization(self):
+        C = 30  # hidden dim of the input
+        B, T = 2, 10
+        norm = RMSNorm(C)
+        x = torch.randn(B, T, C)
+        x2 = torch.fill(torch.zeros(B, T, C), 5)
+        normalized_x = norm(x)
+        normalized_x2 = norm(x2)
+        self.assertTrue(normalized_x.shape == torch.Size([B, T, C]))
+        # When input is all the same nr, the normalized version should be all 1s
+        self.assertTrue(torch.allclose(normalized_x2, torch.ones_like(normalized_x2)))
+
 
 if __name__ == '__main__':
     unittest.main()

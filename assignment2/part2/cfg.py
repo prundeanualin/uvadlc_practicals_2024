@@ -1,5 +1,6 @@
 import argparse
 import os
+import logging as l
 
 def get_config():
     parser = argparse.ArgumentParser()  # Parse training configuration
@@ -23,7 +24,7 @@ def get_config():
     # Additional arguments. Feel free to add more arguments
     parser.add_argument('--log_dir', type=str, default='./logs', help='Sets logging directory for tensorboard logger.')
     parser.add_argument('--seed', type=int, default=0, help='Seed for pseudo-random number generator')
-    parser.add_argument('--num_workers', type=int, default=len(os.sched_getaffinity(0))-1, help='Num cpu workers used for training')
+    parser.add_argument('--num_workers', type=int, default=1, help='Num cpu workers used for training')
     parser.add_argument('--progress_bar', action='store_true', help=(
                             'Use a progress bar indicator for interactive experimentation. '
                             'Not to be used in conjuction with SLURM jobs'
@@ -32,5 +33,16 @@ def get_config():
     parser.add_argument("--precision", choices={"bf16", "bf16-mixed", "16-mixed", "16", "32"}, default="16-mixed")
     parser.add_argument("--compile", action="store_true", help="Compile the model for increased speed.")
     parser.add_argument("--pretrained_tokenizer", action="store_true", help="Use the pretrained tokenizer from OpenAI")
+
+    parser.add_argument("--debug", action="store_true", help="Debug run, for running locally on OSX")
+    parser.add_argument("--disable_train_generation", action="store_true", help="Disable sentence generation during training")
+
     args, _ = parser.parse_known_args()  # Parse known args and ignore the rest
+
+    if args.debug:
+        l.basicConfig(level=l.DEBUG, format='%(levelname)s: %(message)s')
+        l.debug("!!! Running in debug mode !!!")
+        args.num_workers = 1
+    else:
+        args.num_workers = len(os.sched_getaffinity(0)) - 1
     return args
