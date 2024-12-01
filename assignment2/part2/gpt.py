@@ -166,7 +166,9 @@ class CausalSelfAttention(nn.Module):
             # Scale / Normalize
             att = att / math.sqrt(self.head_dim)
             # Apply causal mask
-            att = att.masked_fill(self.mask[..., :T, :T] == 0, -1e9)
+            # Handle different precisions like FP16 or FP32
+            min_value = torch.finfo(att.dtype).min  # Typically around -65504 for FP16
+            att = att.masked_fill(self.mask[..., :T, :T] == 0, min_value)
             # Softmax
             att = F.softmax(att, dim=-1)
             # Dropout
