@@ -6,6 +6,9 @@ from dataset import TextDataset, CharTokenizer
 from cfg import get_config
 from gpt import GPT
 
+import logging as l
+from logging import debug
+
 class GPTLightningModule(pl.LightningModule):
 
     def __init__(self, config, model, dataset):
@@ -93,15 +96,29 @@ if __name__ == "__main__":
     parser.add_argument("--top_p", type=float, default=0.6)
     parser.add_argument('--prompt', type=str, default='Yesterday I went to the ')
     parser.add_argument('--pretrained_tokenizer', action='store_true')
+
+    parser.add_argument('--no-do_sample', dest='do_sample', action='store_false')
+    parser.add_argument("--debug", action="store_true", help="Debug generation")
+
     gen_args = parser.parse_args()
     for key, value in vars(gen_args).items():
         setattr(args, key, value)
-    
-    pl.seed_everything(args.seed) 
 
-    # Load model weights    
+    if args.top_k:
+        print("Using top_k, setting top_p to None")
+        args.top_p = None
+
+    print(args)
+    pl.seed_everything(args.seed)
+
+    # Load model weights
     model_weights_path = os.path.join(args.model_weights_folder, sorted(os.listdir(args.model_weights_folder))[-1])
-    state_dict = torch.load(model_weights_path)
+    if args.debug:
+        # l.basicConfig(level=l.DEBUG, format='%(levelname)s: %(message)s')
+        l.basicConfig(level=l.INFO, format='%(levelname)s: %(message)s')
+        debug("!!! Running in debug mode !!!")
+
+    state_dict = torch.load(model_weights_path, map_location=lambda storage, loc: storage)
 
     # Clean up state dict keys by removing '_orig_mod' prefix if present due to torch.compile()
     if state_dict['hyper_parameters']['compile'] and 'state_dict' in state_dict:

@@ -29,6 +29,7 @@ class TestCausalSelfAttention(unittest.TestCase):
 
     def test_causal_masking(self):
         config = MockConfig(abs_emb=True)
+        config.use_flash_attn = True
         module = CausalSelfAttention(config, debug=True)
         B, T, C = 1, 5, config.n_embd
         x = torch.randn(B, T, C)

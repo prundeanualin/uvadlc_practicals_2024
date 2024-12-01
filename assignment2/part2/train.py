@@ -58,7 +58,7 @@ class GPTLightningModule(pl.LightningModule):
 
         # Generate some sentences once in a while
         if not self.config.disable_train_generation and self.global_step % self.config.generate_every_n_steps == 0:
-            generated_sents = self.generate(do_sample=False)  #TODO remove do_sample and leave the default val
+            generated_sents = self.generate()
             print(f"Generated sentence is: {generated_sents}")
             self.logger.experiment.add_text('Training texts', generated_sents, self.global_step)
         return loss

@@ -497,38 +497,42 @@ class GPT(nn.Module):
 
             # forward the model to get the logits for the index in the sequence
             # pluck the logits at the final step and scale by desired temperature
-
-            # Add a 'dummy' token at the end (duplicate of the last token),
-            # so that the input sequence is expanded with a new position.
-            # This new position will be used to predict the logits for the next token
-            new_token_to_be_generated = idx_cond[..., -1].unsqueeze(-1)
-            debug(f"New token to be gen shape: {new_token_to_be_generated.shape}")
-            debug(f"idx cond shape: {idx_cond.shape}")
-            debug(f"idx shape: {idx.shape}")
-            idx_cond = torch.cat((idx_cond, new_token_to_be_generated), dim=-1)
             logits = self.forward(idx_cond)
             # Get the logits of the last token
-            new_token_logits = logits[:, -1, :].squeeze(1)
-            # debug(f"New token logits are: {logits}")
-            debug(f"New token logits shape: {new_token_logits.shape}")
+            new_token_logits = logits[:, -1, :]
 
             if not do_sample:
                 # take the most likely token
-                _, next_token_idx = torch.max(new_token_logits, dim=-1, keepdim=True)
-                debug(f"id_next: {next_token_idx}")
-                debug(f"id_next shape: {next_token_idx.shape}")
+                _, next_token_idx = torch.topk(new_token_logits, k=1, dim=-1)
 
             else:
+                # Scale the logits by the temperature
+                new_token_logits = new_token_logits / temperature
                 # apply softmax to convert logits to (normalized) probabilities
+                new_token_logits = F.softmax(new_token_logits, dim=-1)
 
                 # optionally only consider top-k logits for sampling.
                 if top_k is not None:
-                    pass
+                    # If there are not top_k words in the vocab, reduce top_k to vocab_size
+                    top_k = min(top_k, new_token_logits.size(-1))
+                    top_k_logits, top_k_idxs = torch.topk(new_token_logits, k=top_k, dim=-1)
+                    next_token_candidate_logits = torch.zeros_like(new_token_logits)
+                    next_token_candidate_logits.scatter_(dim=-1, index=top_k_idxs, src=top_k_logits)
 
                 # optionally apply top-p sampling
                 if top_p is not None:
-                    pass
+                    sorted_logits, sorted_idxs = torch.sort(new_token_logits, dim=-1, descending=True)
+                    # Mask for the largest logits that have the cumulative prob mass smaller than top_p
+                    mask = torch.cumsum(sorted_logits, dim=-1) <= top_p
+                    # In case the largest logit is > top_p, will select just this first logit
+                    mask[..., 0] = True
+                    # Logits that are not to be considered are set to 0
+                    sorted_logits[~mask] = 0
+                    # Place the filtered highest logits back into their original position in new_token_logits
+                    next_token_candidate_logits = torch.zeros_like(new_token_logits)
+                    next_token_candidate_logits.scatter_(dim=-1, index=sorted_idxs, src=sorted_logits)
 
+                next_token_idx = torch.multinomial(next_token_candidate_logits, num_samples=1)  # Shape: (batch_size, 1)
             # append sampled index to the running sequence and continue
             idx = torch.cat((idx, next_token_idx), dim=-1)
         self.train()

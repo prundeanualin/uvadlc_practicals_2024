@@ -34,7 +34,7 @@ def get_config():
     parser.add_argument("--compile", action="store_true", help="Compile the model for increased speed.")
     parser.add_argument("--pretrained_tokenizer", action="store_true", help="Use the pretrained tokenizer from OpenAI")
 
-    parser.add_argument("--debug", action="store_true", help="Debug run, for running locally on OSX")
+    parser.add_argument("--debug", action="store_true", help="Debug run, for logging and running locally on OSX")
     parser.add_argument("--disable_train_generation", action="store_true", help="Disable sentence generation during training")
 
     args, _ = parser.parse_known_args()  # Parse known args and ignore the rest
