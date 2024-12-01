@@ -114,8 +114,7 @@ if __name__ == "__main__":
     # Load model weights
     model_weights_path = os.path.join(args.model_weights_folder, sorted(os.listdir(args.model_weights_folder))[-1])
     if args.debug:
-        # l.basicConfig(level=l.DEBUG, format='%(levelname)s: %(message)s')
-        l.basicConfig(level=l.INFO, format='%(levelname)s: %(message)s')
+        l.basicConfig(level=l.DEBUG, format='%(levelname)s: %(message)s')
         debug("!!! Running in debug mode !!!")
 
     state_dict = torch.load(model_weights_path, map_location=lambda storage, loc: storage)

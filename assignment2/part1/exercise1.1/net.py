@@ -128,10 +128,7 @@ if __name__ == '__main__':
         debug(f"Using {opt.epochs} epochs and {opt.n_repeat} repetitions")
 
     use_gpu = torch.cuda.is_available()
-    # //TODO replace with this model_checkpoint_name before final submission
-    # net_model = 'net_model_wts.pth'
-    net_model = f'{opt.net_type}_{opt.conv_type}_model_wts.pth'
-    # //TODO see above
+    net_model = 'net_model_wts.pth'
 
     conv_type = opt.conv_type
     net_type = opt.net_type
