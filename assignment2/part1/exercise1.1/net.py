@@ -80,16 +80,10 @@ class Net(nn.Module):
 
     def forward(self, x):
 
-        debug(f"Input image size is: {x.shape}")
-
         x = F.relu(self.conv1(x))
-        debug(f"Conv1 output size is: {x.shape}")
         x = F.relu(self.conv2(x))
-        debug(f"Conv2 output size is: {x.shape}")
         x = F.relu(self.conv3(x))
-        debug(f"Conv3 output size is: {x.shape}")
         x = F.relu(self.conv4(x))
-        debug(f"Conv4 output size is: {x.shape}\n\n")
         
         if self.net_type == 'Net1':
             x = self.adap_max(x)
