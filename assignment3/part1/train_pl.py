@@ -70,10 +70,23 @@ class VAE(pl.LightningModule):
         #######################
         # PUT YOUR CODE HERE  #
         #######################
-        L_rec = None
-        L_reg = None
-        bpd = None
-        raise NotImplementedError
+        mean, log_std = self.encoder(imgs)
+
+        print(f" [DEBUG] mean shape: {mean.shape}")
+        print(f" [DEBUG] log_std shape: {log_std.shape}")
+
+        z_reparametrized = sample_reparameterize(mean, log_std)
+        decoded = self.decoder(z_reparametrized)
+        targets = imgs.squeeze(1)
+
+        print(f" [DEBUG] decoded shape: {decoded.shape}")
+        print(f" [DEBUG] targets shape: {targets.shape}")
+
+        L_rec = F.cross_entropy(decoded, targets, reduction='sum')
+        print(f" [DEBUG] L_rec: {L_rec}")
+        L_reg = KLD(mean, log_std)
+        print(f" [DEBUG] L_reg: {L_reg.shape}")
+        bpd = elbo_to_bpd(L_rec + L_reg, imgs.shape)
         #######################
         # END OF YOUR CODE    #
         #######################

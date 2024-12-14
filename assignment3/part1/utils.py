@@ -13,6 +13,7 @@
 # Author: Deep Learning Course | Autumn 2022
 # Date Created: 2022-11-25
 ################################################################################
+import math
 
 import torch
 from torchvision.utils import make_grid
@@ -35,8 +36,10 @@ def sample_reparameterize(mean, std):
     #######################
     # PUT YOUR CODE HERE  #
     #######################
-    z = None
-    raise NotImplementedError
+    # Generate eps ~ N(0, 1) values
+    eps = torch.normal(mean=0, std=1, size=mean.shape)
+    # Restructure the initial Gaussian distribution to a standard one
+    z = eps * std + mean
     #######################
     # END OF YOUR CODE    #
     #######################
@@ -58,8 +61,16 @@ def KLD(mean, log_std):
     #######################
     # PUT YOUR CODE HERE  #
     #######################
-    KLD = None
-    raise NotImplementedError
+
+    # print(f" [DEBUG] mean shape: {mean.shape}")
+
+    # Calculate the KLD per each element
+    reg_d = torch.exp(2 * log_std) + mean ** 2 - 1 - 2 * log_std
+    # Sum over elements (last dim)
+    KLD = 1/2 * torch.sum(reg_d, dim=-1)
+
+    print(f" [DEBUG] KLD shape: {KLD.shape}")
+
     #######################
     # END OF YOUR CODE    #
     #######################
@@ -78,8 +89,7 @@ def elbo_to_bpd(elbo, img_shape):
     #######################
     # PUT YOUR CODE HERE  #
     #######################
-    bpd = None
-    raise NotImplementedError
+    bpd = elbo * math.log2(math.e) * (img_shape[1] * img_shape[2] * img_shape[3])
     #######################
     # END OF YOUR CODE    #
     #######################

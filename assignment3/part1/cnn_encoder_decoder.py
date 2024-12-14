@@ -38,7 +38,21 @@ class CNNEncoder(nn.Module):
         #######################
         # PUT YOUR CODE HERE  #
         #######################
-        raise NotImplementedError
+        self.z_dim = z_dim
+        self.encoder = nn.Sequential(
+            nn.Conv2d(num_input_channels, num_filters, kernel_size=3, padding=1, stride=2),  # 28x28 => 14x14
+            nn.GELU(),
+            nn.Conv2d(num_filters, num_filters, kernel_size=3, padding=1),
+            nn.GELU(),
+            nn.Conv2d(num_filters, 2*num_filters, kernel_size=3, padding=1, stride=2),  # 14x14 => 7x7
+            nn.GELU(),
+            nn.Conv2d(2*num_filters, 2*num_filters, kernel_size=3, padding=1),
+            nn.GELU(),
+            nn.Conv2d(2*num_filters, 2*num_filters, kernel_size=3, padding=1, stride=2),  # 7x7 => 4x4
+            nn.GELU(),
+            nn.Flatten(), # Image grid to single feature vector
+            nn.Linear(16 * 2 * num_filters, 2 * z_dim)
+        )
         #######################
         # END OF YOUR CODE    #
         #######################
@@ -56,9 +70,8 @@ class CNNEncoder(nn.Module):
         #######################
         # PUT YOUR CODE HERE  #
         #######################
-        mean = None
-        log_std = None
-        raise NotImplementedError
+        x = self.encoder(x)
+        mean, log_std = torch.split(x, self.z_dim, dim=-1)
         #######################
         # END OF YOUR CODE    #
         #######################
@@ -84,7 +97,23 @@ class CNNDecoder(nn.Module):
         #######################
         # PUT YOUR CODE HERE  #
         #######################
-        raise NotImplementedError
+        self.z_dim = z_dim
+        # Project from latent dim to the input dim for the first conv layer
+        self.linear = nn.Sequential(
+            nn.Linear(z_dim, 2 * 16 * num_filters),
+            nn.GELU()
+        )
+        self.decoder = nn.Sequential(
+            nn.ConvTranspose2d(2 * num_filters, 2 * num_filters, kernel_size=3, output_padding=0, padding=1, stride=2),  # 4x4 => 7x7
+            nn.GELU(),
+            nn.Conv2d(2 * num_filters, 2 * num_filters, kernel_size=3, padding=1),
+            nn.GELU(),
+            nn.ConvTranspose2d(2 * num_filters, num_filters, kernel_size=3, output_padding=1, padding=1, stride=2),  # 7x7 => 14x14
+            nn.GELU(),
+            nn.Conv2d(num_filters, num_filters, kernel_size=3, padding=1),
+            nn.GELU(),
+            nn.ConvTranspose2d(num_filters, num_input_channels, kernel_size=3, output_padding=1, padding=1, stride=2)  # 14x14 => 28x28
+        )
         #######################
         # END OF YOUR CODE    #
         #######################
@@ -102,8 +131,11 @@ class CNNDecoder(nn.Module):
         #######################
         # PUT YOUR CODE HERE  #
         #######################
-        x = None
-        raise NotImplementedError
+        # Project the latent to the dim of the first conv layer
+        x = self.linear(z)
+        x = x.reshape(x.shape[0], -1, 4, 4)
+        # Run through the decoder
+        x = self.decoder(x)
         #######################
         # END OF YOUR CODE    #
         #######################

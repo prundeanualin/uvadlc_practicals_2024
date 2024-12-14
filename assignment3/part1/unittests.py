@@ -224,9 +224,9 @@ class TestVAE(unittest.TestCase):
 
         # Testing shapes
         self.assertTrue(len(L_rec.squeeze().shape) == 0,
-                        msg="The L_rec output must be a scalar, but has the shape %s." % str(bpd.shape))
+                        msg="The L_rec output must be a scalar, but has the shape %s." % str(L_rec.shape))
         self.assertTrue(len(L_reg.squeeze().shape) == 0,
-                        msg="The L_reg output must be a scalar, but has the shape %s." % str(bpd.shape))
+                        msg="The L_reg output must be a scalar, but has the shape %s." % str(L_reg.shape))
         self.assertTrue(len(bpd.squeeze().shape) == 0,
                         msg="The BPD output must be a scalar, but has the shape %s." % str(bpd.shape))
 
