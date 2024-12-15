@@ -1,3 +1,5 @@
+from pprint import pprint
+
 from cifar10_models import resnet18
 from utils import load_cifar10, train, test
 from adversarial_attack import test_attack
@@ -24,7 +26,7 @@ def main(args):
         print("Loading data")
         trainloader, validloader, testloader, _ = load_cifar10(batch_size=args.batch_size,
                                                                valid_ratio=args.valid_ratio,
-                                                               augmentations=args.augmentations)
+                                                               augmentations=args.augmentations, debug=args.debug)
         if training_strategy == STANDARD and args.pretrained:
             print("Skipping training for standard pretrained model")
         else:
@@ -88,5 +90,19 @@ if __name__ == '__main__':
     parser.add_argument('--num_iter_pgd', type=int, default=10, help='Number of iterations for PGD attack')
     parser.add_argument('--save_dir', type=str, default='', help='Directory to save'	)
     parser.add_argument('--test_crossover_defense', action='store_true', help='Test crossover defense')
+
+    parser.add_argument('--debug', action='store_true', help='Debug mode')
+
     args = parser.parse_args()
+
+    if args.debug:
+        import multiprocessing
+        multiprocessing.set_start_method("fork")
+
+        print(" [WARNING] running in debug mode!")
+        args.batch_size = 16
+        args.num_epochs = 2
+
+        args.train_strats = [STANDARD, FGSM, PGD]
+
     main(args)

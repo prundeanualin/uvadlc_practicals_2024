@@ -9,12 +9,13 @@ import copy
 import time
 import numpy as np
 import matplotlib.pyplot as plt
+from torch.utils.data import Subset
 
 from adversarial_attack import fgsm_loss, pgd_attack
 from globals import STANDARD, FGSM, PGD
 
 
-def load_cifar10(batch_size=4, valid_ratio=0.75, test_bs_1 = True, augmentations = False): 
+def load_cifar10(batch_size=4, valid_ratio=0.75, test_bs_1 = True, augmentations = False, debug=False):
     if augmentations:
         transform_train = transforms.Compose([transforms.RandomHorizontalFlip(),
                                               transforms.RandomCrop(32, padding=4),
@@ -34,6 +35,13 @@ def load_cifar10(batch_size=4, valid_ratio=0.75, test_bs_1 = True, augmentations
                                             download=True, transform=transform_train)
     validtestset = torchvision.datasets.CIFAR10(root='./data', train=False,
                                                 download=True, transform=transform_validtest)
+    classes = trainset.classes # TODO remove this
+
+    if debug:
+        num_samples = 100
+        print(f" [DEBUG] Using only {num_samples} samples from dataset")
+        trainset = Subset(trainset, range(num_samples))
+        validtestset = Subset(validtestset, range(num_samples))
 
     valid_len = int(len(validtestset) * valid_ratio)
 
@@ -43,7 +51,7 @@ def load_cifar10(batch_size=4, valid_ratio=0.75, test_bs_1 = True, augmentations
     validloader = torch.utils.data.DataLoader(validset, batch_size=batch_size, shuffle=False, num_workers=2)
     testloader = torch.utils.data.DataLoader(testset, batch_size=1 if test_bs_1 else batch_size, shuffle=False, num_workers=2)
 
-    classes = trainset.classes
+    # classes = trainset.classes # TODO decomment this
     N_tr = len(trainset)
     N_tst = len(testset)
     N_vl = len(validset)
@@ -104,7 +112,13 @@ def train(model, trainloader, validloader, num_epochs=25, defense_strategy = STA
                         # Get adverserial examples using PGD attack
                         # Add them to the original batch
                         # Make sure the model has the correct labels
-                        raise NotImplementedError()
+
+                        perturbed_data = pgd_attack(model, inputs, labels, criterion, args=defense_args)
+
+                        # Add perturbed data and its labels to the inputs
+                        inputs = torch.cat((inputs, perturbed_data), dim=0).to(device)
+                        labels = torch.cat((labels, labels), dim=0).to(device)
+
                         optimizer.zero_grad()
                         outputs = model(inputs)
                         loss = criterion(outputs, labels)
