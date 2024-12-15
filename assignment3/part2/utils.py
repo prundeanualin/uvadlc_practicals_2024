@@ -35,7 +35,7 @@ def load_cifar10(batch_size=4, valid_ratio=0.75, test_bs_1 = True, augmentations
                                             download=True, transform=transform_train)
     validtestset = torchvision.datasets.CIFAR10(root='./data', train=False,
                                                 download=True, transform=transform_validtest)
-    classes = trainset.classes # TODO remove this
+    classes = trainset.classes
 
     if debug:
         num_samples = 100
@@ -51,7 +51,6 @@ def load_cifar10(batch_size=4, valid_ratio=0.75, test_bs_1 = True, augmentations
     validloader = torch.utils.data.DataLoader(validset, batch_size=batch_size, shuffle=False, num_workers=2)
     testloader = torch.utils.data.DataLoader(testset, batch_size=1 if test_bs_1 else batch_size, shuffle=False, num_workers=2)
 
-    # classes = trainset.classes # TODO decomment this
     N_tr = len(trainset)
     N_tst = len(testset)
     N_vl = len(validset)
