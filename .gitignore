@@ -12,4 +12,7 @@ assignment2/part1/.ipynb_checkpoints
 # Assignment 2
 assignment2/part2/logs
 *.ckpt
+
+# Assignment 3
 assignment3/data
+assignment3/part1/**/VAE_logs
