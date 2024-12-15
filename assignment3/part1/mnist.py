@@ -24,7 +24,7 @@ import numpy as np
 def discretize(x, num_values):
     return (x * num_values).long().clamp_(max=num_values-1)
 
-def mnist(root='../data/', batch_size=128, num_workers=4, download=True):
+def mnist(root='../data/', batch_size=128, num_workers=4, download=True, debug=False):
     """
     Returns data loaders for 4-bit MNIST dataset, i.e. values between 0 and 15.
 
@@ -49,6 +49,16 @@ def mnist(root='../data/', batch_size=128, num_workers=4, download=True):
     train_dataset, val_dataset = random_split(dataset,
                                               lengths=[54000, 6000],
                                               generator=torch.Generator().manual_seed(42))
+
+    if debug:
+        from torch.utils.data import Subset
+        from logging import debug
+        num_samples = 100
+        debug(f"Running with {num_samples} samples for each dataset split")
+        train_dataset = Subset(train_dataset, range(num_samples))
+        val_dataset = Subset(val_dataset, range(num_samples))
+        test_set = Subset(test_set, range(num_samples))
+
 
     # Each data loader returns tuples of (img, label)
     # For the generative models we don't need the labels, which we need to take into account

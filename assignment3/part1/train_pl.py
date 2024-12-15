@@ -16,6 +16,7 @@
 
 import argparse
 import os
+from pprint import pprint
 
 import numpy as np
 import torch
@@ -29,6 +30,7 @@ from mnist import mnist
 from cnn_encoder_decoder import CNNEncoder, CNNDecoder
 from utils import *
 
+from logging import debug
 
 class VAE(pl.LightningModule):
 
@@ -43,6 +45,8 @@ class VAE(pl.LightningModule):
         super().__init__()
         self.save_hyperparameters()
 
+        self.lr = lr
+        self.z_dim = z_dim
         self.encoder = CNNEncoder(z_dim=z_dim, num_filters=num_filters)
         self.decoder = CNNDecoder(z_dim=z_dim, num_filters=num_filters)
 
@@ -71,21 +75,19 @@ class VAE(pl.LightningModule):
         # PUT YOUR CODE HERE  #
         #######################
         mean, log_std = self.encoder(imgs)
-
-        print(f" [DEBUG] mean shape: {mean.shape}")
-        print(f" [DEBUG] log_std shape: {log_std.shape}")
-
-        z_reparametrized = sample_reparameterize(mean, log_std)
+        std = torch.exp(log_std).to(self.device)
+        z_reparametrized = sample_reparameterize(mean, std)
         decoded = self.decoder(z_reparametrized)
+        # Reshape original images: [B,1,H,W] -> [B, H, W]
         targets = imgs.squeeze(1)
 
-        print(f" [DEBUG] decoded shape: {decoded.shape}")
-        print(f" [DEBUG] targets shape: {targets.shape}")
-
-        L_rec = F.cross_entropy(decoded, targets, reduction='sum')
-        print(f" [DEBUG] L_rec: {L_rec}")
-        L_reg = KLD(mean, log_std)
-        print(f" [DEBUG] L_reg: {L_reg.shape}")
+        L_rec = F.cross_entropy(decoded, targets, reduction='none')
+        # Sum over the last 2 dimension
+        L_rec = torch.einsum('bij->b', L_rec)
+        # Mean across batch elements
+        L_rec = L_rec.mean()
+        # Calculate KLD and do mean across batch elements
+        L_reg = KLD(mean, log_std).mean()
         bpd = elbo_to_bpd(L_rec + L_reg, imgs.shape)
         #######################
         # END OF YOUR CODE    #
@@ -104,8 +106,12 @@ class VAE(pl.LightningModule):
         #######################
         # PUT YOUR CODE HERE  #
         #######################
-        x_samples = None
-        raise NotImplementedError
+        # Sample from p(z) ~ N(0, 1)
+        x_samples = torch.normal(0, 1, size=(batch_size, self.z_dim)).to(self.device)
+        # Run through the decoder to generate the image
+        x_samples = self.decoder(x_samples)  # Shape [B, 16, H, W]; 16 = nr of classes
+        # idx of the maximum predicted logit value = 4-bit pixel value
+        x_samples = torch.argmax(x_samples, dim=1, keepdim=True)
         #######################
         # END OF YOUR CODE    #
         #######################
@@ -192,7 +198,8 @@ def train_vae(args):
     os.makedirs(args.log_dir, exist_ok=True)
     train_loader, val_loader, test_loader = mnist(batch_size=args.batch_size,
                                                    num_workers=args.num_workers,
-                                                   root=args.data_dir)
+                                                   root=args.data_dir,
+                                                  debug=args.debug)
 
     # Create a PyTorch Lightning trainer with the generation callback
     gen_callback = GenerateCallback(save_to_disk=True)
@@ -265,7 +272,18 @@ if __name__ == '__main__':
                         help=('Use a progress bar indicator for interactive experimentation. '
                               'Not to be used in conjuction with SLURM jobs'))
 
+    parser.add_argument('--debug', action='store_true', help='Enable debug mode for running locally')
+
     args = parser.parse_args()
+    pprint(args)
+
+    if args.debug:
+        from logging import basicConfig, DEBUG
+        basicConfig(level=DEBUG, format='%(levelname)s: %(message)s')
+        debug("Running in debug mode")
+        # Fix loading error on OSX
+        from multiprocessing import set_start_method
+        set_start_method("fork")
 
     train_vae(args)
 
