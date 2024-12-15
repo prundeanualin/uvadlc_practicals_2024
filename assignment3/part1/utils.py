@@ -114,8 +114,21 @@ def visualize_manifold(decoder, grid_size=20):
     #######################
     # PUT YOUR CODE HERE  #
     #######################
-    img_grid = None
-    raise NotImplementedError
+    percentiles = torch.arange(start=(0.5 / grid_size), end=1, step=(1 / grid_size))
+    # z is 2D => 2D percentiles => Cartesian product between every percentile
+    percentiles_2d = torch.cartesian_prod(percentiles, percentiles).reshape(-1, 2)
+    z_distrib = torch.distributions.normal.Normal(0, 1)
+    # Get z values at every 2D percentile combination
+    z = z_distrib.icdf(percentiles_2d)
+
+    # Run through the decoder and generate the image
+    output = decoder(z)
+    # Get the pixel with the highest value
+    imgs = torch.argmax(output, dim=1, keepdim=True)
+
+    # Normalize
+    imgs = imgs.float() / 15
+    img_grid = make_grid(imgs, nrow=grid_size, normalize=True, value_range=(0, 1), pad_value=0.5).detach().cpu()
     #######################
     # END OF YOUR CODE    #
     #######################
